@@ -1,28 +1,23 @@
 <?php
 class Database {
-    private $host = DB_HOST;
-    private $user = DB_USER;
-    private $pass = DB_PASS;
-    private $dbname = DB_NAME;
-
+    private $host = 'localhost';
+    private $username = 'root';
+    private $password = '';
+    private $dbname = 'gestion_utilisateurs';
     private $dbh;
     private $stmt;
 
     public function __construct() {
-        $this->db = $this->getPDO();
-    }
-
-    public function getPDO() {
         try {
-            $dsn = 'mysql:host=localhost;dbname=your_database_name;charset=utf8';
-            $username = 'your_username';
-            $password = 'your_password';
-            return new PDO($dsn, $username, $password, [
+            $dsn = "mysql:host={$this->host};dbname={$this->dbname};charset=utf8mb4";
+            $this->dbh = new PDO($dsn, $this->username, $this->password, [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_EMULATE_PREPARES => false
             ]);
         } catch (PDOException $e) {
-            die('Database connection failed: ' . $e->getMessage());
+            error_log("Database connection failed: " . $e->getMessage());
+            die("Database connection failed. Please check your configuration.");
         }
     }
 
@@ -47,5 +42,21 @@ class Database {
     public function fetch() {
         $this->execute();
         return $this->stmt->fetch();
+    }
+
+    public function lastInsertId() {
+        return $this->dbh->lastInsertId();
+    }
+
+    public function beginTransaction() {
+        return $this->dbh->beginTransaction();
+    }
+
+    public function commit() {
+        return $this->dbh->commit();
+    }
+
+    public function rollBack() {
+        return $this->dbh->rollBack();
     }
 }
