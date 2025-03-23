@@ -1,54 +1,94 @@
 <?php
-// Start session
 session_start();
 
-// Load configuration
-require_once __DIR__ . '/../config/config.php';
+require_once '../vendor/autoload.php';
 
-// Load core classes
-require_once __DIR__ . '/../app/core/Controller.php';
-require_once __DIR__ . '/../app/core/Model.php';
-require_once __DIR__ . '/../app/core/Database.php';
-require_once __DIR__ . '/../app/core/Auth.php';
+use App\Controllers\AuthController;
+use App\Controllers\HomeController;
+use App\Controllers\UserController;
 
-// Load controllers
-require_once __DIR__ . '/../app/controllers/AuthController.php';
-require_once __DIR__ . '/../app/controllers/AdminController.php';
-require_once __DIR__ . '/../app/controllers/UserController.php';
+$uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$method = $_SERVER['REQUEST_METHOD'];
 
-// Simple router
-$controller = isset($_GET['controller']) ? $_GET['controller'] : 'auth';
-$action = isset($_GET['action']) ? $_GET['action'] : 'login';
-
-// Sanitize input using htmlspecialchars instead of the deprecated FILTER_SANITIZE_STRING
-function sanitizeInput($input) {
-    return htmlspecialchars(strip_tags(trim($input)), ENT_QUOTES, 'UTF-8');
+if ($uri === '/') {
+    if (isset($_SESSION['user_id'])) {
+        $controller = new HomeController();
+        $controller->index();
+    } else {
+        $controller = new AuthController();
+        $controller->login();
+    }
+} elseif ($uri === '/login' || $uri === '/auth/login') {
+    $controller = new AuthController();
+    if ($method === 'POST') {
+        $controller->login();
+    } else {
+        $controller->login();
+    }
+} elseif ($uri === '/auth/register') {
+    $controller = new AuthController();
+    if ($method === 'POST') {
+        $controller->register();
+    } else {
+        $controller->register();
+    }
+} elseif ($uri === '/home/dashboard') {
+    if (!isset($_SESSION['user_id'])) {
+        header('Location: /login');
+        exit;
+    }
+    $controller = new HomeController();
+    $controller->dashboard();
+} elseif ($uri === '/logout') {
+    $controller = new AuthController();
+    $controller->logout();
+} elseif ($uri === '/users') {
+    if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
+        header('Location: /login');
+        exit;
+    }
+    $controller = new UserController();
+    $controller->index();
+} elseif ($uri === '/users/create') {
+    if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
+        header('Location: /login');
+        exit;
+    }
+    $controller = new UserController();
+    if ($method === 'POST') {
+        $controller->create();
+    } else {
+        $controller->create();
+    }
+} elseif (preg_match('/^\/users\/edit\/(\d+)$/', $uri, $matches)) {
+    if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
+        header('Location: /login');
+        exit;
+    }
+    $controller = new UserController();
+    $controller->edit($matches[1]);
+} elseif (preg_match('/^\/users\/delete\/(\d+)$/', $uri, $matches)) {
+    if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
+        header('Location: /login');
+        exit;
+    }
+    $controller = new UserController();
+    $controller->delete($matches[1]);
+} elseif ($uri === '/users/status') {
+    if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
+        header('Location: /login');
+        exit;
+    }
+    $controller = new UserController();
+    $controller->updateStatus();
+} elseif ($uri === '/profile') {
+    if (!isset($_SESSION['user_id'])) {
+        header('Location: /login');
+        exit;
+    }
+    $controller = new AuthController();
+    $controller->profile();
+} else {
+    // Rediriger vers une page par défaut si l'URL est invalide
+    echo "Page not found!";
 }
-
-$controller = sanitizeInput($controller);
-$action = sanitizeInput($action);
-
-// Map controller names to classes
-$controllerMap = [
-    'auth' => 'AuthController',
-    'admin' => 'AdminController',
-    'user' => 'UserController'
-];
-
-// Check if controller exists in map
-if (!isset($controllerMap[$controller])) {
-    header("HTTP/1.0 404 Not Found");
-    die("Controller not found");
-}
-
-$controllerClass = $controllerMap[$controller];
-$controllerInstance = new $controllerClass();
-
-// Check if method exists
-if (!method_exists($controllerInstance, $action)) {
-    header("HTTP/1.0 404 Not Found");
-    die("Action not found");
-}
-
-// Call the method
-$controllerInstance->$action();

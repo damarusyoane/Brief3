@@ -1,114 +1,145 @@
 <?php
-require_once __DIR__ . '/../core/Controller.php';
-require_once __DIR__ . '/../models/UserModel.php';
-require_once __DIR__ . '/../models/SessionModel.php';
-require_once __DIR__ . '/../../config/PHPMailer/PHPMailer.php';
-require_once __DIR__ . '/../../config/PHPMailer/SMTP.php';
-require_once __DIR__ . '/../../config/PHPMailer/Exception.php';
 
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
-use PHPMailer\PHPMailer\SMTP;
+namespace App\Controllers;
 
-class UserController extends Controller {
+use App\Models\User;
+use App\Core\Database;
+use App\Core\Controller;
+
+class UserController extends Controller
+{
     private $userModel;
-    private $sessionModel;
+    private $db;
 
-    public function __construct() {
-        $this->userModel = new UserModel();
-        $this->sessionModel = new SessionModel();
+    public function __construct()
+    {
+        $this->db = new Database();
+        $this->userModel = new User($this->db);
     }
 
-    private function checkUserAccess() {
-        if (!isset($_SESSION['user_id'])) {
-            header('Location: /auth/login');
-            exit();
+    public function index()
+    {
+        // Check if user is admin
+        if (!$this->isAdmin()) {
+            $this->redirect('/');
         }
+
+        $users = $this->userModel->getAllUsers();
+        $this->view('users/index', ['users' => $users]);
     }
 
-    public function dashboard() {
-        $this->checkUserAccess();
-        
-        $user = $this->userModel->getUserById($_SESSION['user_id']);
-        $this->view('user/dashboard', ['user' => $user]);
-    }
+    public function create()
+    {
+        // Check if user is admin
+        if (!$this->isAdmin()) {
+            $this->redirect('/');
+        }
 
-    public function sessions() {
-        $this->checkUserAccess();
-        
-        $user = $this->userModel->getUserById($_SESSION['user_id']);
-        $sessions = $this->sessionModel->getUserSessions($_SESSION['user_id']);
-        $currentSession = $this->sessionModel->getSessionByToken(session_id());
-        
-        $this->view('user/sessions', [
-            'user' => $user,
-            'sessions' => $sessions,
-            'currentSession' => $currentSession
-        ]);
-    }
-
-    public function updateProfile() {
-        $this->checkUserAccess();
-        
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $userId = $_SESSION['user_id'];
-            $username = $_POST['username'];
-            $email = $_POST['email'];
+            $username = $_POST['username'] ?? '';
+            $email = $_POST['email'] ?? '';
+            $password = $_POST['password'] ?? '';
+            $role_id = $_POST['role_id'] ?? 2; // Default to user role
 
-            // Validate unique username and email
-            if ($this->userModel->isUsernameEmailUnique($username, $email, $userId)) {
-                $this->userModel->updateUser($userId, [
-                    'username' => $username,
-                    'email' => $email
-                ]);
-                
-                $this->view('user/dashboard', [
-                    'user' => $this->userModel->getUserById($userId),
-                    'success' => 'Profile updated successfully'
-                ]);
+            if (empty($username) || empty($email) || empty($password)) {
+                $error = "All fields are required";
+                $this->view('users/create', ['error' => $error]);
+                return;
+            }
+
+            $userData = [
+                'username' => $username,
+                'email' => $email,
+                'password' => password_hash($password, PASSWORD_DEFAULT),
+                'role_id' => $role_id,
+                'status' => 'active'
+            ];
+
+            if ($this->userModel->createUser($userData)) {
+                $this->redirect('/users');
             } else {
-                $this->view('user/dashboard', [
-                    'user' => $this->userModel->getUserById($userId),
-                    'error' => 'Username or email already exists'
-                ]);
+                $error = "Failed to create user";
+                $this->view('users/create', ['error' => $error]);
             }
+        } else {
+            $this->view('users/create');
         }
     }
 
-    public function changePassword() {
-        $this->checkUserAccess();
-        
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $userId = $_SESSION['user_id'];
-            $currentPassword = $_POST['current_password'];
-            $newPassword = $_POST['new_password'];
-            $confirmPassword = $_POST['confirm_password'];
-            
-            $user = $this->userModel->getUserById($userId);
-            
-            if (!password_verify($currentPassword, $user['password'])) {
-                $this->view('user/change-password', [
-                    'error' => 'Current password is incorrect'
-                ]);
-                return;
-            }
-            
-            if ($newPassword !== $confirmPassword) {
-                $this->view('user/change-password', [
-                    'error' => 'New passwords do not match'
-                ]);
-                return;
-            }
-            
-            $this->userModel->updateUser($userId, [
-                'password' => password_hash($newPassword, PASSWORD_DEFAULT)
-            ]);
-            
-            $this->view('user/change-password', [
-                'success' => 'Password updated successfully'
-            ]);
-        } else {
-            $this->view('user/change-password');
+    public function edit($id)
+    {
+        // Check if user is admin or if user is editing their own profile
+        if (!$this->isAdmin() && $_SESSION['user_id'] != $id) {
+            $this->redirect('/');
         }
+
+        $user = $this->userModel->getUserById($id);
+        if (!$user) {
+            $this->redirect('/users');
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $username = $_POST['username'] ?? '';
+            $email = $_POST['email'] ?? '';
+            $status = $_POST['status'] ?? 'active';
+            $role_id = $_POST['role_id'] ?? $user['role_id'];
+
+            $userData = [
+                'username' => $username,
+                'email' => $email,
+                'status' => $status,
+                'role_id' => $role_id
+            ];
+
+            // Only update password if provided
+            if (!empty($_POST['password'])) {
+                $userData['password'] = password_hash($_POST['password'], PASSWORD_DEFAULT);
+            }
+
+            if ($this->userModel->updateUser($id, $userData)) {
+                $this->redirect('/users');
+            } else {
+                $error = "Failed to update user";
+                $this->view('users/edit', ['user' => $user, 'error' => $error]);
+            }
+        } else {
+            $this->view('users/edit', ['user' => $user]);
+        }
+    }
+
+    public function delete($id)
+    {
+        // Check if user is admin
+        if (!$this->isAdmin()) {
+            $this->redirect('/');
+        }
+
+        if ($this->userModel->deleteUser($id)) {
+            $this->redirect('/users');
+        } else {
+            $error = "Failed to delete user";
+            $this->view('users/index', ['error' => $error]);
+        }
+    }
+    public function updateStatus()
+{
+    if (!$this->isAdmin()) {
+        $this->redirect('/');
+    }
+
+    $id = $_POST['id'] ?? null;
+    $status = $_POST['status'] ?? 'active';
+
+    if ($id && $this->userModel->updateStatus($id, $status)) {
+        $this->redirect('/users');
+    } else {
+        $error = "Failed to update user status";
+        $this->view('users/index', ['error' => $error]);
     }
 }
+
+    private function isAdmin()
+    {
+        return isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin';
+    }
+} 

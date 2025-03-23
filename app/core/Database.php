@@ -1,62 +1,55 @@
 <?php
-class Database {
+namespace App\Core;
+
+use PDO;
+use PDOException;
+use PDOStatement;
+
+class Database
+{
+    private static $instance = null;
     private $host = 'localhost';
+    private $db_name = 'gestion_utilisateurs';
     private $username = 'root';
     private $password = '';
-    private $dbname = 'gestion_utilisateurs';
-    private $dbh;
-    private $stmt;
+    private $conn;
 
-    public function __construct() {
+    public function __construct()
+    {
+        $this->conn = null;
+
         try {
-            $dsn = "mysql:host={$this->host};dbname={$this->dbname};charset=utf8mb4";
-            $this->dbh = new PDO($dsn, $this->username, $this->password, [
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_EMULATE_PREPARES => false
-            ]);
-        } catch (PDOException $e) {
-            error_log("Database connection failed: " . $e->getMessage());
-            die("Database connection failed. Please check your configuration.");
+            $this->conn = new PDO(
+                "mysql:host=" . $this->host . ";dbname=" . $this->db_name,
+                $this->username,
+                $this->password
+            );
+            $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        } catch(PDOException $e) {
+            echo "Connection error: " . $e->getMessage();
         }
     }
 
-    // Préparer une requête SQL
-    public function prepare($sql) {
-        $this->stmt = $this->dbh->prepare($sql);
-        return $this->stmt;
+    public static function getInstance()
+    {
+        if (self::$instance === null) {
+            self::$instance = new Database();
+        }
+        return self::$instance;
     }
 
-    // Exécuter une requête préparée
-    public function execute($params = []) {
-        return $this->stmt->execute($params);
+    public function getConnection()
+    {
+        return $this->conn;
     }
 
-    // Récupérer tous les résultats
-    public function fetchAll() {
-        $this->execute();
-        return $this->stmt->fetchAll();
+    public function query($sql)
+    {
+        return $this->conn->query($sql);
     }
 
-    // Récupérer un seul résultat
-    public function fetch() {
-        $this->execute();
-        return $this->stmt->fetch();
-    }
-
-    public function lastInsertId() {
-        return $this->dbh->lastInsertId();
-    }
-
-    public function beginTransaction() {
-        return $this->dbh->beginTransaction();
-    }
-
-    public function commit() {
-        return $this->dbh->commit();
-    }
-
-    public function rollBack() {
-        return $this->dbh->rollBack();
+    public function prepare($sql): PDOStatement
+    {
+        return $this->conn->prepare($sql);
     }
 }
