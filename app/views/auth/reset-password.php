@@ -16,7 +16,7 @@ ob_start();
                 <span class="block sm:inline"><?php echo $error; ?></span>
             </div>
         <?php endif; ?>
-        <form class="mt-8 space-y-6" action="/auth/reset-password" method="POST">
+        <form class="mt-8 space-y-6" action="/reset-password" method="POST">
             <input type="hidden" name="token" value="<?php echo htmlspecialchars($token); ?>">
             <div class="rounded-md shadow-sm -space-y-px">
                 <div>

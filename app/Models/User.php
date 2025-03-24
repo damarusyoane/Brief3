@@ -122,11 +122,17 @@ class User
 
     public function updatePassword($id, $password)
     {
-        $stmt = $this->db->prepare("UPDATE users SET password = :password WHERE id = :id");
-        return $stmt->execute([
-            'id' => $id,
-            'password' => password_hash($password, PASSWORD_DEFAULT)
-        ]);
+        try {
+            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+            $stmt = $this->db->prepare("UPDATE users SET password = :password WHERE id = :id");
+            return $stmt->execute([
+                'id' => $id,
+                'password' => $hashedPassword
+            ]);
+        } catch (\Exception $e) {
+            error_log("Password update error: " . $e->getMessage());
+            return false;
+        }
     }
 
     public function clearResetToken($id)
@@ -228,6 +234,20 @@ class User
         $stmt->execute([$token]);
         $result = $stmt->fetch();
         return $result ? $result['id'] : false;
+    }
+
+    public function getUserSessions($userId)
+    {
+        $stmt = $this->db->prepare("
+            SELECT 
+                s.*,
+                TIMESTAMPDIFF(MINUTE, s.login_time, COALESCE(s.logout_time, NOW())) as duration_minutes
+            FROM sessions s
+            WHERE s.user_id = :user_id
+            ORDER BY s.login_time DESC
+        ");
+        $stmt->execute(['user_id' => $userId]);
+        return $stmt->fetchAll();
     }
 
 }

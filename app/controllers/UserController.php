@@ -159,17 +159,20 @@ class UserController extends Controller
     public function cleanupSessions()
     {
         if (!$this->isAdmin()) {
-            $this->redirect('/');
+            $_SESSION['error'] = 'Access denied. Admin privileges required.';
+            $this->redirect('/users');
+            return;
         }
 
-        $days = 30; // Default to 30 days
-        if ($this->userModel->cleanupOldSessions($days)) {
-            $_SESSION['message'] = "Old sessions have been cleaned up successfully.";
-        } else {
-            $_SESSION['error'] = "Failed to clean up old sessions.";
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if ($this->userModel->cleanupOldSessions()) {
+                $_SESSION['success'] = 'Old sessions have been cleaned up successfully';
+            } else {
+                $_SESSION['error'] = 'Failed to clean up old sessions';
+            }
         }
         
-        $this->redirect('/users');
+        $this->redirect('/sessions');
     }
 
     private function isAdmin()

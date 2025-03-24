@@ -47,7 +47,7 @@ elseif ($uri === '/auth/register') {
     } else {
         $controller->forgotPassword();
     }
-} elseif ($uri === '/auth/reset-password') {
+} elseif (strpos($uri, '/reset-password') === 0) {
     $controller = new AuthController();
     if ($method === 'POST') {
         $controller->resetPassword();
@@ -134,3 +134,7 @@ elseif (preg_match('/^\/users\/delete\/(\d+)$/', $uri, $matches)) {
     // Rediriger vers une page par défaut si l'URL est invalide
     echo "Page not found!";
 }
+
+// Session management routes
+$router->get('/sessions', [UserController::class, 'sessions']);
+$router->post('/cleanup-sessions', [UserController::class, 'cleanupSessions']);

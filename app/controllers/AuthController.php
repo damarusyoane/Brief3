@@ -1,6 +1,13 @@
 <?php
 namespace App\Controllers;
 
+require_once __DIR__ . '/../../config/PHPMailer/PHPMailer.php';
+require_once __DIR__ . '/../../config/PHPMailer/SMTP.php';
+require_once __DIR__ . '/../../config/PHPMailer/Exception.php';
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
 use App\Core\Controller;
 use App\Models\User;
 use App\Core\Database;
@@ -141,6 +148,7 @@ class AuthController extends Controller
         }
 
         $user = $this->userModel->getUserById($_SESSION['user_id']);
+        $sessions = $this->userModel->getUserSessions($_SESSION['user_id']);
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $username = $_POST['username'] ?? '';
@@ -159,12 +167,13 @@ class AuthController extends Controller
 
             if ($this->userModel->updateUser($user['id'], $userData)) {
                 $_SESSION['username'] = $username;
+                $_SESSION['success'] = 'Profile updated successfully';
                 $this->redirect('/profile');
             } else {
-                $this->view('auth/profile', ['user' => $user, 'error' => 'Failed to update profile']);
+                $this->view('auth/profile', ['user' => $user, 'sessions' => $sessions, 'error' => 'Failed to update profile']);
             }
         } else {
-            $this->view('auth/profile', ['user' => $user]);
+            $this->view('auth/profile', ['user' => $user, 'sessions' => $sessions]);
         }
     }
 
@@ -192,33 +201,35 @@ class AuthController extends Controller
             $expires = date('Y-m-d H:i:s', strtotime('+1 hour'));
             
             // Store reset token in database
-            $this->userModel->storeResetToken($user['id'], $token, $expires);
+            $this->userModel->updateResetToken($user['id'], $token, $expires);
 
             // Send reset email
-            $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
+            $mail = new PHPMailer(true);
             try {
                 $mail->isSMTP();
                 $mail->Host = 'smtp.gmail.com';
                 $mail->SMTPAuth = true;
-                $mail->Username = 'damarusngankou@gmail.com'; // Replace with your email
-                $mail->Password = 'btss mbkp ydjr thov'; // Replace with your app password
-                $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+                $mail->Username = 'damarusngankou@gmail.com';
+                $mail->Password = 'btss mbkp ydjr thov';
+                $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
                 $mail->Port = 587;
-                 // Désactiver la vérification SSL (développement uniquement)
-            $mail->SMTPOptions = [
-                'ssl' => [
-                    'verify_peer' => false,
-                    'verify_peer_name' => false,
-                    'allow_self_signed' => true,
-                ],
-            ];
+                $mail->SMTPOptions = [
+                    'ssl' => [
+                        'verify_peer' => false,
+                        'verify_peer_name' => false,
+                        'allow_self_signed' => true,
+                    ],
+                ];
 
                 $mail->setFrom('no-reply@USM.com', 'User Management System');
                 $mail->addAddress($email, $user['username']);
 
                 $mail->isHTML(true);
                 $mail->Subject = 'Password Reset Request';
-                $resetLink = "http://" . $_SERVER['HTTP_HOST'] . "/reset-password?token=" . $token;
+                $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
+                $host = $_SERVER['HTTP_HOST'];
+                $baseUrl = $protocol . $host;
+                $resetLink = $baseUrl . "/reset-password?token=" . $token;
                 $mail->Body = "
                     <h2>Password Reset Request</h2>
                     <p>You have requested to reset your password. Click the link below to proceed:</p>
@@ -239,12 +250,13 @@ class AuthController extends Controller
         }
 
         // Show forgot password form
-        $this->view('auth/forgotpassword');
+        $this->view('auth/forgot-password');
     }
 
     public function resetPassword()
     {
-        $token = $_GET['token'] ?? '';
+        // Get token from URL or POST data
+        $token = $_GET['token'] ?? $_POST['token'] ?? '';
         
         if (empty($token)) {
             $_SESSION['error'] = 'Invalid reset token';
@@ -275,27 +287,28 @@ class AuthController extends Controller
             }
 
             // Verify token and update password
-            $userId = $this->userModel->verifyResetToken($token);
+            $user = $this->userModel->findByResetToken($token);
             
-            if (!$userId) {
+            if (!$user) {
                 $_SESSION['error'] = 'Invalid or expired reset token';
                 header('Location: /forgot-password');
                 exit;
             }
 
-            // Update password
-            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-            $this->userModel->updatePassword($userId, $hashedPassword);
-
-            // Clear reset token
-            $this->userModel->clearResetToken($userId);
-
-            $_SESSION['success'] = 'Your password has been reset successfully';
-            header('Location: /login');
-            exit;
+            // Update password and clear reset token
+            if ($this->userModel->updatePassword($user['id'], $password)) {
+                $this->userModel->clearResetToken($user['id']);
+                $_SESSION['success'] = 'Your password has been reset successfully';
+                header('Location: /login');
+                exit;
+            } else {
+                $_SESSION['error'] = 'Failed to reset password. Please try again.';
+                header('Location: /reset-password?token=' . $token);
+                exit;
+            }
         }
 
         // Show reset password form
-        $this->view('auth/resetpassword', ['token' => $token]);
+        $this->view('auth/reset-password', ['token' => $token]);
     }
 }
