@@ -136,5 +136,5 @@ elseif (preg_match('/^\/users\/delete\/(\d+)$/', $uri, $matches)) {
 }
 
 // Session management routes
-$router->get('/sessions', [UserController::class, 'sessions']);
-$router->post('/cleanup-sessions', [UserController::class, 'cleanupSessions']);
+// $router->get('/sessions', [UserController::class, 'sessions']);
+// $router->post('/cleanup-sessions', [UserController::class, 'cleanupSessions']);

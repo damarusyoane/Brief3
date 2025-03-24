@@ -114,7 +114,6 @@ class User
         $stmt = $this->db->prepare("
             SELECT * FROM users 
             WHERE reset_token = :token 
-            AND reset_token_expires > NOW()
         ");
         $stmt->execute(['token' => $token]);
         return $stmt->fetch();
@@ -219,23 +218,6 @@ class User
         ");
         return $stmt->execute(['days' => $days]);
     }
-
-    public function storeResetToken($userId, $token, $expires)
-    {
-        $sql = "UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE id = ?";
-        $stmt = $this->db->prepare($sql);
-        return $stmt->execute([$token, $expires, $userId]);
-    }
-
-    public function verifyResetToken($token)
-    {
-        $sql = "SELECT id FROM users WHERE reset_token = ? AND reset_token_expires > NOW()";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([$token]);
-        $result = $stmt->fetch();
-        return $result ? $result['id'] : false;
-    }
-
     public function getUserSessions($userId)
     {
         $stmt = $this->db->prepare("

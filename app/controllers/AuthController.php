@@ -255,14 +255,12 @@ class AuthController extends Controller
 
     public function resetPassword()
     {
+        // Log the incoming request
+        error_log("Reset Password called with method: " . $_SERVER['REQUEST_METHOD']);
+
         // Get token from URL or POST data
         $token = $_GET['token'] ?? $_POST['token'] ?? '';
-        
-        if (empty($token)) {
-            $_SESSION['error'] = 'Invalid reset token';
-            header('Location: /forgot-password');
-            exit;
-        }
+        error_log("Token: " . $token);
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $password = $_POST['password'] ?? '';
