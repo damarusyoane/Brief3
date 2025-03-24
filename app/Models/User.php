@@ -98,4 +98,136 @@ class User
         $stmt = $this->db->prepare("UPDATE users SET status = :status WHERE id = :id");
         return $stmt->execute(['id' => $id, 'status' => $status]);
     }
+
+    public function updateResetToken($id, $token, $expires)
+    {
+        $stmt = $this->db->prepare("UPDATE users SET reset_token = :token, reset_token_expires = :expires WHERE id = :id");
+        return $stmt->execute([
+            'id' => $id,
+            'token' => $token,
+            'expires' => $expires
+        ]);
+    }
+
+    public function findByResetToken($token)
+    {
+        $stmt = $this->db->prepare("
+            SELECT * FROM users 
+            WHERE reset_token = :token 
+            AND reset_token_expires > NOW()
+        ");
+        $stmt->execute(['token' => $token]);
+        return $stmt->fetch();
+    }
+
+    public function updatePassword($id, $password)
+    {
+        $stmt = $this->db->prepare("UPDATE users SET password = :password WHERE id = :id");
+        return $stmt->execute([
+            'id' => $id,
+            'password' => password_hash($password, PASSWORD_DEFAULT)
+        ]);
+    }
+
+    public function clearResetToken($id)
+    {
+        $stmt = $this->db->prepare("UPDATE users SET reset_token = NULL, reset_token_expires = NULL WHERE id = :id");
+        return $stmt->execute(['id' => $id]);
+    }
+
+    public function createSession($sessionData)
+    {
+        $stmt = $this->db->prepare("
+            INSERT INTO sessions (user_id, session_id, ip_address, user_agent, login_time)
+            VALUES (:user_id, :session_id, :ip_address, :user_agent, NOW())
+        ");
+        return $stmt->execute($sessionData);
+    }
+
+    public function updateSessionLogout($userId, $sessionId)
+    {
+        $stmt = $this->db->prepare("
+            UPDATE sessions 
+            SET logout_time = NOW() 
+            WHERE user_id = :user_id 
+            AND session_id = :session_id 
+            AND logout_time IS NULL
+        ");
+        return $stmt->execute([
+            'user_id' => $userId,
+            'session_id' => $sessionId
+        ]);
+    }
+
+    public function getUserStats()
+    {
+        $stmt = $this->db->prepare("
+            SELECT 
+                COUNT(*) as total_users,
+                SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active_users,
+                SUM(CASE WHEN status = 'inactive' THEN 1 ELSE 0 END) as inactive_users
+            FROM users
+        ");
+        $stmt->execute();
+        return $stmt->fetch();
+    }
+
+    public function getRecentSessions()
+    {
+        $stmt = $this->db->prepare("
+            SELECT 
+                s.*,
+                u.username,
+                u.email,
+                TIMESTAMPDIFF(MINUTE, s.login_time, COALESCE(s.logout_time, NOW())) as duration_minutes
+            FROM sessions s
+            JOIN users u ON s.user_id = u.id
+            ORDER BY s.login_time DESC
+            LIMIT 10
+        ");
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    public function getAllSessions()
+    {
+        $stmt = $this->db->prepare("
+            SELECT 
+                s.*,
+                u.username,
+                u.email,
+                TIMESTAMPDIFF(MINUTE, s.login_time, COALESCE(s.logout_time, NOW())) as duration_minutes
+            FROM sessions s
+            JOIN users u ON s.user_id = u.id
+            ORDER BY s.login_time DESC
+        ");
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    public function cleanupOldSessions($days = 30)
+    {
+        $stmt = $this->db->prepare("
+            DELETE FROM sessions 
+            WHERE login_time < DATE_SUB(NOW(), INTERVAL :days DAY)
+        ");
+        return $stmt->execute(['days' => $days]);
+    }
+
+    public function storeResetToken($userId, $token, $expires)
+    {
+        $sql = "UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE id = ?";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([$token, $expires, $userId]);
+    }
+
+    public function verifyResetToken($token)
+    {
+        $sql = "SELECT id FROM users WHERE reset_token = ? AND reset_token_expires > NOW()";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$token]);
+        $result = $stmt->fetch();
+        return $result ? $result['id'] : false;
+    }
+
 }

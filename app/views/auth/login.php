@@ -50,6 +50,11 @@ $content = <<<HTML
                     Sign in
                 </button>
             </div>
+            <div class="text-center">
+            <a href="/auth/forgot-password" class="font-medium text-indigo-600 hover:text-indigo-500">
+                Forgot Password
+            </a>
+        </div>
         </form>
     </div>
 </div>

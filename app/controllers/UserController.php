@@ -25,7 +25,14 @@ class UserController extends Controller
         }
 
         $users = $this->userModel->getAllUsers();
-        $this->view('users/index', ['users' => $users]);
+        $stats = $this->userModel->getUserStats();
+        $sessions = $this->userModel->getRecentSessions();
+        
+        $this->view('users/index', [
+            'users' => $users,
+            'stats' => $stats,
+            'sessions' => $sessions
+        ]);
     }
 
     public function create()
@@ -121,22 +128,49 @@ class UserController extends Controller
             $this->view('users/index', ['error' => $error]);
         }
     }
+
     public function updateStatus()
-{
-    if (!$this->isAdmin()) {
-        $this->redirect('/');
+    {
+        if (!$this->isAdmin()) {
+            $this->redirect('/');
+        }
+
+        $id = $_POST['id'] ?? null;
+        $status = $_POST['status'] ?? 'active';
+
+        if ($id && $this->userModel->updateStatus($id, $status)) {
+            $this->redirect('/users');
+        } else {
+            $error = "Failed to update user status";
+            $this->view('users/index', ['error' => $error]);
+        }
     }
 
-    $id = $_POST['id'] ?? null;
-    $status = $_POST['status'] ?? 'active';
+    public function sessions()
+    {
+        if (!$this->isAdmin()) {
+            $this->redirect('/');
+        }
 
-    if ($id && $this->userModel->updateStatus($id, $status)) {
+        $sessions = $this->userModel->getAllSessions();
+        $this->view('users/sessions', ['sessions' => $sessions]);
+    }
+
+    public function cleanupSessions()
+    {
+        if (!$this->isAdmin()) {
+            $this->redirect('/');
+        }
+
+        $days = 30; // Default to 30 days
+        if ($this->userModel->cleanupOldSessions($days)) {
+            $_SESSION['message'] = "Old sessions have been cleaned up successfully.";
+        } else {
+            $_SESSION['error'] = "Failed to clean up old sessions.";
+        }
+        
         $this->redirect('/users');
-    } else {
-        $error = "Failed to update user status";
-        $this->view('users/index', ['error' => $error]);
     }
-}
 
     private function isAdmin()
     {

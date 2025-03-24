@@ -95,14 +95,26 @@ class AuthController extends Controller
                     return;
                 }
 
-                $_SESSION['user_id'] = $user['id'];
-                $_SESSION['username'] = $user['username'];
-                $_SESSION['user_role'] = $user['role_name'];
+                // Store session information
+                $sessionData = [
+                    'user_id' => $user['id'],
+                    'session_id' => session_id(),
+                    'ip_address' => $_SERVER['REMOTE_ADDR'],
+                    'user_agent' => $_SERVER['HTTP_USER_AGENT']
+                ];
+                
+                if ($this->userModel->createSession($sessionData)) {
+                    $_SESSION['user_id'] = $user['id'];
+                    $_SESSION['username'] = $user['username'];
+                    $_SESSION['user_role'] = $user['role_name'];
 
-                if ($user['role_name'] === 'admin') {
-                    $this->redirect('/users');
+                    if ($user['role_name'] === 'admin') {
+                        $this->redirect('/users');
+                    } else {
+                        $this->redirect('/profile');
+                    }
                 } else {
-                    $this->redirect('/profile');
+                    $this->view('auth/login', ['error' => 'Failed to create session. Please try again.']);
                 }
             } else {
                 $this->view('auth/login', ['error' => 'Invalid username or password']);
@@ -114,6 +126,10 @@ class AuthController extends Controller
 
     public function logout()
     {
+        if (isset($_SESSION['user_id'])) {
+            // Update session with logout time
+            $this->userModel->updateSessionLogout($_SESSION['user_id'], session_id());
+        }
         session_destroy();
         $this->redirect('/login');
     }
@@ -152,5 +168,134 @@ class AuthController extends Controller
         }
     }
 
+    public function forgotPassword()
+    {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $email = $_POST['email'] ?? '';
+            
+            if (empty($email)) {
+                $_SESSION['error'] = 'Please enter your email address';
+                header('Location: /forgot-password');
+                exit;
+            }
 
+            $user = $this->userModel->findByEmail($email);
+            
+            if (!$user) {
+                $_SESSION['error'] = 'No account found with that email address';
+                header('Location: /forgot-password');
+                exit;
+            }
+
+            // Generate reset token
+            $token = bin2hex(random_bytes(32));
+            $expires = date('Y-m-d H:i:s', strtotime('+1 hour'));
+            
+            // Store reset token in database
+            $this->userModel->storeResetToken($user['id'], $token, $expires);
+
+            // Send reset email
+            $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
+            try {
+                $mail->isSMTP();
+                $mail->Host = 'smtp.gmail.com';
+                $mail->SMTPAuth = true;
+                $mail->Username = 'damarusngankou@gmail.com'; // Replace with your email
+                $mail->Password = 'btss mbkp ydjr thov'; // Replace with your app password
+                $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+                $mail->Port = 587;
+                 // Désactiver la vérification SSL (développement uniquement)
+            $mail->SMTPOptions = [
+                'ssl' => [
+                    'verify_peer' => false,
+                    'verify_peer_name' => false,
+                    'allow_self_signed' => true,
+                ],
+            ];
+
+                $mail->setFrom('no-reply@USM.com', 'User Management System');
+                $mail->addAddress($email, $user['username']);
+
+                $mail->isHTML(true);
+                $mail->Subject = 'Password Reset Request';
+                $resetLink = "http://" . $_SERVER['HTTP_HOST'] . "/reset-password?token=" . $token;
+                $mail->Body = "
+                    <h2>Password Reset Request</h2>
+                    <p>You have requested to reset your password. Click the link below to proceed:</p>
+                    <p><a href='{$resetLink}'>{$resetLink}</a></p>
+                    <p>This link will expire in 1 hour.</p>
+                    <p>If you didn't request this, please ignore this email.</p>
+                ";
+
+                $mail->send();
+                $_SESSION['success'] = 'Password reset instructions have been sent to your email';
+                header('Location: /login');
+                exit;
+            } catch (\Exception $e) {
+                $_SESSION['error'] = 'Failed to send reset email. Please try again later.';
+                header('Location: /forgot-password');
+                exit;
+            }
+        }
+
+        // Show forgot password form
+        $this->view('auth/forgotpassword');
+    }
+
+    public function resetPassword()
+    {
+        $token = $_GET['token'] ?? '';
+        
+        if (empty($token)) {
+            $_SESSION['error'] = 'Invalid reset token';
+            header('Location: /forgot-password');
+            exit;
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $password = $_POST['password'] ?? '';
+            $confirmPassword = $_POST['confirm_password'] ?? '';
+
+            if (empty($password) || empty($confirmPassword)) {
+                $_SESSION['error'] = 'Please fill in all fields';
+                header('Location: /reset-password?token=' . $token);
+                exit;
+            }
+
+            if ($password !== $confirmPassword) {
+                $_SESSION['error'] = 'Passwords do not match';
+                header('Location: /reset-password?token=' . $token);
+                exit;
+            }
+
+            if (strlen($password) < 8) {
+                $_SESSION['error'] = 'Password must be at least 8 characters long';
+                header('Location: /reset-password?token=' . $token);
+                exit;
+            }
+
+            // Verify token and update password
+            $userId = $this->userModel->verifyResetToken($token);
+            
+            if (!$userId) {
+                $_SESSION['error'] = 'Invalid or expired reset token';
+                header('Location: /forgot-password');
+                exit;
+            }
+
+            // Update password
+            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+            $this->userModel->updatePassword($userId, $hashedPassword);
+
+            // Clear reset token
+            $this->userModel->clearResetToken($userId);
+
+            $_SESSION['success'] = 'Your password has been reset successfully';
+            header('Location: /login');
+            exit;
+        }
+
+        // Show reset password form
+        $this->view('auth/resetpassword', ['token' => $token]);
+    }
 }
