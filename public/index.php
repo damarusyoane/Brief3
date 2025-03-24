@@ -40,6 +40,20 @@ elseif ($uri === '/auth/register') {
     } else {
         $controller->register();
     }
+} elseif ($uri === '/auth/forgot-password') {
+    $controller = new AuthController();
+    if ($method === 'POST') {
+        $controller->forgotPassword();
+    } else {
+        $controller->forgotPassword();
+    }
+} elseif ($uri === '/auth/reset-password') {
+    $controller = new AuthController();
+    if ($method === 'POST') {
+        $controller->resetPassword();
+    } else {
+        $controller->resetPassword();
+    }
 } // check  l'url du dashboard et affiche la page dashboard 
 elseif ($uri === '/home/dashboard') {
     if (!isset($_SESSION['user_id'])) {
@@ -95,8 +109,21 @@ elseif (preg_match('/^\/users\/delete\/(\d+)$/', $uri, $matches)) {
     }
     $controller = new UserController();
     $controller->updateStatus();
-}  // permet a un utilisateur de se connecter et de voir ses coordonnees
- elseif ($uri === '/profile') {
+} elseif ($uri === '/users/sessions') {
+    if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
+        header('Location: /login');
+        exit;
+    }
+    $controller = new UserController();
+    $controller->sessions();
+} elseif ($uri === '/users/cleanup-sessions') {
+    if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
+        header('Location: /login');
+        exit;
+    }
+    $controller = new UserController();
+    $controller->cleanupSessions();
+} elseif ($uri === '/profile') {
     if (!isset($_SESSION['user_id'])) {
         header('Location: /login');
         exit;
