@@ -50,8 +50,8 @@ Views:
   1. Access /auth/login
    - Try with incorrect credentials (should show error)
    - Login with admin credentials:
-     Username: admin
-     Password: password
+     Username: administrateur0305
+     Password: motdepasse348
    - Should redirect to /users/index
    - Verify dashboard shows:
      * Total users 
