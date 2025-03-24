@@ -1,76 +1,67 @@
 # Brief3
 Gestion des utilisateurs avec l'architecture MVC en PHP
 Controllers:
-- AuthController.php: Handles login, logout, password reset
-- AdminController.php: Handles admin dashboard, user management
-- UserController.php: Handles user dashboard, profile, sessions
+- AuthController.php: Gere login, logout, password reset
+- AdminController.php: Gere admin dashboard, user management
+- UserController.php: Gere user dashboard, profile, sessions
 
 Models:
-- UserModel.php: User operations
-- SessionModel.php: Session tracking
-- RoleModel.php: Role management
+- UserModel.php: Gere les operations de l'utilisateurs, La gestion des roles
 
 Views:
-/admin/
-- dashboard.php
-- users.php
-- create_user.php
-- edit_user.php
+
 
 /auth/
 - login.php
 - forgot_password.php
 - reset_password.php
+- profile.php
 
 /user/
-- dashboard.php
-- change-password.php
-- sessions.php
+- index.php
+- create.php
+- edit.php
 
 
-Testing Checklist
-□ Database Setup
-  □ Create database
-  □ Import schema
-  □ Create admin role and user
+ Checklist
+□ bd Setup
+  □ Cree bd
+  □ Cree admin role et utilisateur
 
-□ Admin Functions
+□ Fonction Admin 
   □ Admin login
-  □ Create new users
-  □ Edit users
-  □ View all users
-  □ Monitor sessions
-  □ Toggle user status
+  □ Cree nouveau utilisateur
+  □ Modifie ustilisateurs
+  □ Voir tout les utilisateurs
+  □ Change le statuts des utilisateurs
 
-□ User Functions
-  □ User login
+□ Fonction Utilisateurs
+  □ Utilisateurs login
   □ Update profile
   □ Change password
-  □ View sessions
   □ Logout
 
-□ Security Features
+□ Securisation
   □ Password hashing
-  □ Session management
   □ Access control
-  □ CSRF protection
 
-  How you can test the app
+  Coment utiliser l'app
+  Se placer sur le dossiers public et sur le fichier index.php
   1. Access /auth/login
    - Try with incorrect credentials (should show error)
    - Login with admin credentials:
      Username: admin
-     Password: Admin@123
-   - Should redirect to /admin/dashboard
+     Password: password
+   - Should redirect to /users/index
    - Verify dashboard shows:
-     * Total users count
-     * Active users count
-     * Online users count
-     * Recent activity
+     * Total users 
+     * Active users 
+     * Info Users
+   
 
 
 1. Create Regular User:
-   - Go to /admin/users
+   - Go to /users/create
    - Click "Create New User"
    - Fill form with:
      * Username: testuser
@@ -85,6 +76,7 @@ Testing Checklist
      * Email
      * Username
      * Password (optional)
+     * Role
    - Save and verify changes
 
 3. Toggle User Status:
@@ -105,24 +97,15 @@ Testing Checklist
    - Login with:
      Username: testuser
      Password: Test@123
-   - Should redirect to /user/dashboard
+   - Should redirect to /auth/profile
 
 2. Profile Management:
    - Try updating profile:
      * Change username
      * Change email
    - Try changing password:
-     * Enter current password
      * Enter new password
-     * Confirm new password
-
-3. Session Management:
-   - Go to /user/sessions
-   - Verify current session shows
-   - Verify session details:
-     * IP Address
-     * Browser info
-     * Login time
+  click on update user
 
 
 
@@ -134,10 +117,6 @@ Testing Checklist
    - Set new password
    - Try logging in with new password
 
-2. Remember Me:
-   - Login with "Remember Me" checked
-   - Close browser
-   - Reopen and verify still logged in
 
 
 
@@ -153,11 +132,6 @@ Testing Checklist
      * Duplicate username
      * Duplicate email
 
-3. Session Security:
-   - Open multiple browsers
-   - Verify sessions tracked separately
-   - Logout from one
-   - Verify other sessions unaffected
 
 
 1. User Creation:
@@ -169,10 +143,8 @@ Testing Checklist
 2. User Authentication:
    - Wrong password
    - Inactive user login
-   - Expired session
    - Invalid reset token
 
 3. Profile Updates:
    - Invalid email format
-   - Current password incorrect
    - New passwords don't match

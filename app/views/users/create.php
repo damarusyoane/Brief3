@@ -1,3 +1,4 @@
+<!-- code pour permettre l'affichage le contenu du head et footer sur le fichier main -->
 <?php
 $content = <<<HTML
 <div class="min-h-screen bg-gray-100 py-6 flex flex-col justify-center sm:py-12">
@@ -7,14 +8,14 @@ $content = <<<HTML
                 <div class="divide-y divide-gray-200">
                     <div class="py-8 text-base leading-6 space-y-4 text-gray-700 sm:text-lg sm:leading-7">
                         <h2 class="text-2xl font-bold mb-8">Create New User</h2>
-                        
-                        <?php if (isset($error)): ?>
-                        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-                            <span class="block sm:inline"><?php echo htmlspecialchars($error); ?></span>
-                        </div>
-                        <?php endif; ?>
-
+                    <!-- la methode cree un tilisateur et l'enregistre dans la bd-->
                         <form action="/users/create" method="POST" class="space-y-6">
+                            <!-- affiche les erreurs si il y'en a -->
+                          <?php if (isset($error)): ?>
+                           <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                              <span class="block sm:inline"><?php echo htmlspecialchars($error); ?></span>
+                             </div>
+                          <?php endif; ?>
                             <div>
                                 <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
                                 <input type="text" name="username" id="username" required

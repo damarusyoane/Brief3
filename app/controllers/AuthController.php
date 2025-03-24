@@ -151,4 +151,6 @@ class AuthController extends Controller
             $this->view('auth/profile', ['user' => $user]);
         }
     }
+
+
 }

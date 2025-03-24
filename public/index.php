@@ -1,4 +1,6 @@
 <?php
+// defini le fichier de configuration
+// demarer la session
 session_start();
 
 require_once '../vendor/autoload.php';
@@ -6,40 +8,48 @@ require_once '../vendor/autoload.php';
 use App\Controllers\AuthController;
 use App\Controllers\HomeController;
 use App\Controllers\UserController;
+// defini le chemin vers l'url des pages
 
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $method = $_SERVER['REQUEST_METHOD'];
 
+// l'url de la page d'accueil
+// check  l'utilisitaeur est connecter et le dirige vers la page d'accueil en fonction de son profil
 if ($uri === '/') {
     if (isset($_SESSION['user_id'])) {
         $controller = new HomeController();
         $controller->index();
-    } else {
+    } // au cas contraire le dirige vers la page login
+    else {
         $controller = new AuthController();
         $controller->login();
     }
-} elseif ($uri === '/login' || $uri === '/auth/login') {
+} // check  l'url du login et affiche la page login 
+ elseif ($uri === '/login' || $uri === '/auth/login') {
     $controller = new AuthController();
     if ($method === 'POST') {
         $controller->login();
     } else {
         $controller->login();
     }
-} elseif ($uri === '/auth/register') {
+} // check  l'url du enregistrer et affiche la page enregistrer 
+elseif ($uri === '/auth/register') {
     $controller = new AuthController();
     if ($method === 'POST') {
         $controller->register();
     } else {
         $controller->register();
     }
-} elseif ($uri === '/home/dashboard') {
+} // check  l'url du dashboard et affiche la page dashboard 
+elseif ($uri === '/home/dashboard') {
     if (!isset($_SESSION['user_id'])) {
         header('Location: /login');
         exit;
     }
     $controller = new HomeController();
     $controller->dashboard();
-} elseif ($uri === '/logout') {
+} // check  l'url du login et vers tue la session de l'utilisateur et le redirige vers la page login
+ elseif ($uri === '/logout') {
     $controller = new AuthController();
     $controller->logout();
 } elseif ($uri === '/users') {
@@ -49,7 +59,8 @@ if ($uri === '/') {
     }
     $controller = new UserController();
     $controller->index();
-} elseif ($uri === '/users/create') {
+} // check l'url pour creer l'utilisitateur et l'affiche la page create user 
+elseif ($uri === '/users/create') {
     if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
         header('Location: /login');
         exit;
@@ -60,28 +71,32 @@ if ($uri === '/') {
     } else {
         $controller->create();
     }
-} elseif (preg_match('/^\/users\/edit\/(\d+)$/', $uri, $matches)) {
+} // check si la personne essayant de se connecter est l'admin et le permet de modifier l'utilisateur 
+elseif (preg_match('/^\/users\/edit\/(\d+)$/', $uri, $matches)) {
     if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
         header('Location: /login');
         exit;
     }
     $controller = new UserController();
     $controller->edit($matches[1]);
-} elseif (preg_match('/^\/users\/delete\/(\d+)$/', $uri, $matches)) {
+}  // check si la personne essayant de se connecter est l'admin et le permet de supprimer l'utilisateur 
+elseif (preg_match('/^\/users\/delete\/(\d+)$/', $uri, $matches)) {
     if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
         header('Location: /login');
         exit;
     }
     $controller = new UserController();
     $controller->delete($matches[1]);
-} elseif ($uri === '/users/status') {
+} // permet a un utilisateur de se connecter et de modifier ses coordonnees
+ elseif ($uri === '/users/status') {
     if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
         header('Location: /login');
         exit;
     }
     $controller = new UserController();
     $controller->updateStatus();
-} elseif ($uri === '/profile') {
+}  // permet a un utilisateur de se connecter et de voir ses coordonnees
+ elseif ($uri === '/profile') {
     if (!isset($_SESSION['user_id'])) {
         header('Location: /login');
         exit;

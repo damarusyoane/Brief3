@@ -1,3 +1,6 @@
+<?php
+ob_start();
+?>
 <div class="bg-white shadow overflow-hidden sm:rounded-lg">
     <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
         <div>
@@ -8,6 +11,7 @@
             Add New User
         </a>
     </div>
+    <!-- table pour voir les utilisateurs et leurs infos -->
     <div class="border-t border-gray-200">
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
@@ -29,6 +33,7 @@
                     </th>
                 </tr>
             </thead>
+            <!-- boucle pour afficher les utilisateurs -->
             <tbody class="bg-white divide-y divide-gray-200">
                 <?php foreach ($users as $user): ?>
                 <tr>
@@ -46,6 +51,7 @@
                             <?php echo htmlspecialchars($user['status']); ?>
                         </span>
                     </td>
+                    <!-- actions pour modifier et supprimer les utilisateurs -->
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <a href="/users/edit/<?php echo $user['id']; ?>" class="text-indigo-600 hover:text-indigo-900 mr-4">Edit</a>
                         <a href="/users/delete/<?php echo $user['id']; ?>" class="text-red-600 hover:text-red-900" onclick="return confirm('Are you sure you want to delete this user?')">Delete</a>
@@ -56,3 +62,6 @@
         </table>
     </div>
 </div> 
+<?php
+$content = ob_get_clean();
+require_once __DIR__ . '/../layouts/main.php'; 

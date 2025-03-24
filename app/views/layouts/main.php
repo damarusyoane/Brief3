@@ -11,9 +11,11 @@
         <div class="max-w-7xl mx-auto px-4">
             <div class="flex justify-between h-16">
                 <div class="flex">
+                    <!-- Renvoie a la page d'accueil-->
                     <div class="flex-shrink-0 flex items-center">
                         <a href="/" class="text-xl font-bold text-gray-800">User Management</a>
                     </div>
+                    <!-- check si c'est un admin et l'envoie soit a la page de la liste des utilisateurs soit a son profile-->
                     <?php if (isset($_SESSION['user_id'])): ?>
                     <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
                         <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin'): ?>
@@ -27,6 +29,7 @@
                     </div>
                     <?php endif; ?>
                 </div>
+                <!-- permet de se deconnecter de l'application-->
                 <div class="flex items-center">
                     <?php if (isset($_SESSION['user_id'])): ?>
                     <a href="/logout" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">
